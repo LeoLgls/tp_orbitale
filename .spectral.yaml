@@ -1,0 +1,43 @@
+# Règles de style du contrat Orbitale : npx --yes @stoplight/spectral-cli@6 lint openapi.yaml
+extends: ["spectral:oas"]
+
+rules:
+  # Règle fournie : chaque opération a un identifiant stable (utile pour générer des clients)
+  orbitale-operation-id:
+    description: Chaque opération doit avoir un operationId
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      field: operationId
+      function: truthy
+
+  # Règle fournie : toute erreur 4xx/5xx est décrite en application/problem+json
+  orbitale-erreurs-problem-json:
+    description: Toute réponse 4xx/5xx doit être décrite en application/problem+json
+    message: "Réponse d'erreur sans contenu application/problem+json (RFC 9457)"
+    severity: error
+    given: "$.paths[*][*].responses[?(@property.match(/^[45]/))]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: object
+              required: ["application/problem+json"]
+
+  # Règle maison : aucun verbe dans les chemins (/createEvent, /getOrders...)
+  orbitale-pas-de-verbe:
+    description: Les chemins ne doivent pas contenir de verbe (utiliser des noms de ressources)
+    message: "Le chemin '{{value}}' contient un verbe interdit : utilisez un nom de ressource au pluriel."
+    severity: error
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: '/\/(create|get|update|delete|list|add|remove|cancel|validate)/i'
+
+  operation-description: off
